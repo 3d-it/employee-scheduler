@@ -2,9 +2,9 @@ import { useEffect, useState } from "react";
 import api from "./api";
 
 export default function EmployeeModal({ onClose }) {
-  const [employees, setEmployees] = useState([]);
+  const [employees, setEmployees] = useState([]); // ALWAYS array
   const [name, setName] = useState("");
-  const [error, setError] = useState("");
+  const [error, setError] = useState(null);
 
   const auth = {
     headers: {
@@ -12,34 +12,29 @@ export default function EmployeeModal({ onClose }) {
     },
   };
 
-  // ======================
-  // LOAD EMPLOYEES
-  // ======================
   useEffect(() => {
     loadEmployees();
   }, []);
 
-  const loadEmployees = async () => {
+  async function loadEmployees() {
     try {
       const res = await api.get("/employees", auth);
 
-      // 🔑 HARD GUARANTEE ARRAY
+      // ✅ FORCE ARRAY
       if (Array.isArray(res.data)) {
         setEmployees(res.data);
       } else {
-        console.warn("Employees response was not array:", res.data);
+        console.warn("Employees API returned non-array:", res.data);
         setEmployees([]);
       }
     } catch (err) {
       console.error("Failed to load employees", err);
       setEmployees([]);
+      setError("Failed to load employees");
     }
-  };
+  }
 
-  // ======================
-  // ADD EMPLOYEE
-  // ======================
-  const addEmployee = async () => {
+  async function addEmployee() {
     if (!name.trim()) return;
 
     try {
@@ -47,54 +42,57 @@ export default function EmployeeModal({ onClose }) {
       setName("");
       loadEmployees();
     } catch (err) {
-      setError("You must be an admin to add employees.");
+      console.error("Failed to add employee", err);
+      setError("Failed to add employee");
     }
-  };
+  }
 
-  // ======================
-  // DELETE EMPLOYEE
-  // ======================
-  const deleteEmployee = async (id) => {
+  async function deleteEmployee(id) {
     try {
       await api.delete(`/employees/${id}`, auth);
       loadEmployees();
     } catch (err) {
-      setError("You must be an admin to delete employees.");
+      console.error("Failed to delete employee", err);
+      setError("Failed to delete employee");
     }
-  };
+  }
 
-  // ======================
-  // RENDER
-  // ======================
   return (
-    <div className="modal-overlay">
+    <div className="modal-backdrop">
       <div className="modal">
         <h3>Manage Employees</h3>
 
-        {error && <div className="error">{error}</div>}
+        {error && <p style={{ color: "red" }}>{error}</p>}
 
-        <div className="form-row">
+        <div style={{ display: "flex", gap: "8px" }}>
           <input
-            id="employee-name"
-            name="employeeName"
+            type="text"
+            placeholder="Employee name"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="Employee name"
           />
           <button onClick={addEmployee}>Add</button>
         </div>
 
-        <ul>
-          {Array.isArray(employees) &&
+        <ul style={{ marginTop: "16px" }}>
+          {Array.isArray(employees) && employees.length > 0 ? (
             employees.map((emp) => (
-              <li key={emp.id}>
+              <li key={emp.id} style={{ marginBottom: "6px" }}>
                 {emp.name}
-                <button onClick={() => deleteEmployee(emp.id)}>✕</button>
+                <button
+                  style={{ marginLeft: "10px" }}
+                  onClick={() => deleteEmployee(emp.id)}
+                >
+                  X
+                </button>
               </li>
-            ))}
+            ))
+          ) : (
+            <li>No employees found</li>
+          )}
         </ul>
 
-        <button className="close-btn" onClick={onClose}>
+        <button onClick={onClose} style={{ marginTop: "12px" }}>
           Close
         </button>
       </div>
